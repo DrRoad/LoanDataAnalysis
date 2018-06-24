@@ -1,0 +1,336 @@
+---
+title: "Loan Data Exploration"
+author: "Yoni Wainsztok"
+date: "04-09-2017"
+output: html_document
+---
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+#Defining markdown chunks options
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, error = FALSE, message = FALSE)
+```
+
+#Abstract
+Nowadays, loans are considered as a complex tool which serves both borrowers and investors. Loans can be divided into a large number of areas and components which determine its terms. Sometimes, due to their complexity, these terms are not clear to the borrower or even to the investor.  
+As a result, the main questions that usually arise during loan creation are:
+
+* Can the borrower repay the loan plus interest under loan conditions?  
+* How long will it take?  
+* What is the maximum loan amount that can be granted to a borrower?  
+
+This report was made in order to get insights which might answer such questions or provide direction of research regarding loan uptake.
+
+#Data-set information
+This report shows data partial exploration of the [Loan dataset](https://www.kaggle.com/jschnessl/prosperloans) obtained from kaggle website and comes from the Prosper p2p lending platform.   
+This exploration will focus on 9 of the 81 variables presented in this dataset:  
+
+1. L.Months.Since.Originated - Number of months since the loan originated.  
+2. L.Orig.Amount - The origination amount of the loan.  
+3. L.Orig.Quarter - The quarter in which the loan was originated.  
+4. Loan.Status - The current status of the loan: Cancelled/Chargedoff/Completed/Current/Defaulted/FinalPaymentInProgress/PastDue.  
+5. Prosper.Rating - The Prosper Rating assigned at the time the listing was created: 0-N/A, 1-HR, 2-E, 3-D, 4-C, 5-B, 6-A, 7-AA.  
+6. Prosper.Score - A custom risk score built using historical Prosper data. The score ranges from 1-11, with 11 being the lowest risk score.  
+7. Borrower.Rate - The Borrower's interest rate for the loan.  
+8. Borrower.State - The two letter abbreviation of the state of the address of the borrower.  
+9. Stated.Monthly.Income - The monthly income the borrower stated at the time the loan was created.  
+
+
+```{r packages}
+# Loading all relevant packages and defining options
+# Missing packages require installation using install.packages command
+options(digits=10, scipen = 7)
+library(reshape)
+library(moments)
+library(stringr)
+library(plyr)
+library(Hmisc)
+library(corrplot)
+library(car)
+library(gridExtra)
+```
+
+```{r Load_the_Data}
+#Loading raw Data set prosperLoanData
+rawcsv<-read.csv("prosperLoanData.csv", check.names=TRUE, na.strings=c("","NA"))
+#Extracting 9 columns of interest and renaming them
+csv<-rename(rawcsv[,c("LoanMonthsSinceOrigination",
+                      "LoanOriginalAmount",
+                      "LoanOriginationQuarter",
+                      "LoanStatus",
+                      "ProsperRating..Alpha.",
+                      "ProsperScore",
+                      "BorrowerRate",
+                      "BorrowerState",
+                      "StatedMonthlyIncome")],
+                      c(
+                      LoanMonthsSinceOrigination="L.Months.Since.Originated",
+                      LoanOriginalAmount="L.Orig.Amount",
+                      LoanOriginationQuarter="L.Orig.Quarter",
+                      LoanStatus="Loan.Status",
+                      ProsperRating..Alpha.="Prosper.Rating",
+                      ProsperScore="Prosper.Score",
+                      BorrowerRate="Borrower.Rate",
+                      BorrowerState="Borrower.State",
+                      StatedMonthlyIncome="Stated.Monthly.Income"))
+
+```
+
+#Descriptive statistics
+As a preliminary step the measures of central tendancy and dispersion are shown:
+```{r Descriptive_statistics}
+# Getting descriptive statistics
+str(csv)
+summary(csv)
+comma <- function(x) format(x, digits = 2, big.mark = ",")
+#splitting L.Orig.Quarter into two seperated columns: Loan.Quarter and Loan.Creation.Year
+csv<-mutate(csv,"Loan.Quarter"=str_split_fixed(csv$L.Orig.Quarter, " ", 2)[,1])
+csv<-mutate(csv,"Loan.Year"=str_split_fixed(csv$L.Orig.Quarter, " ", 2)[,2])
+csv[,"Loan.Quarter"]<-as.factor(csv[,"Loan.Quarter"])
+csv[,"Loan.Year"]<-as.factor(csv[,"Loan.Year"])
+```
+
+Preliminary examination shows that the dataset consists `r comma(nrow(csv))` loans.  
+Moreover, average amount of loans is 8337$ and most of the loans are still active (not completed).  
+It is also worth noting that most of the loans originated from California state.  
+Furthermore, loan quarter variable shows also year information in addition to the quarter number. Hence in order to better handle this variable, it will be splitted into two separated columns: Loan.Quarter and Loan.Year.  
+
+#Univariate Plots Section  
+First step in data exploration is to analyze the frequency of each variable in order to find different directions of inquiry.
+
+###Duration of Loans (Months since originated)  
+According to the histogram below, duration of loans is most concentrated between 0-10 months.Also, this variable is somewhat skewed to the right. In order to better present such distribution it is common to transform such skewed data by log transformation (will not be applied here).
+```{r Univariate_Plots1}
+hist(csv$L.Months.Since.Originated, xlab="Months")
+```
+
+The calculations of skewness (`r round(skewness(csv$L.Months.Since.Originated),2)`) and kurtosis (`r round(kurtosis(csv$L.Months.Since.Originated),2)`) supports this finding. 
+
+###Loan Original Amount  
+To illustrate this data a boxplot was drawn:
+```{r Univariate_Plots2}
+boxplot(csv$L.Orig.Amount, horizontal = T, main="Loan Original Amount", xlab="Loan Quantity")
+```
+
+This boxplot shows that most loans are of size between `r unname(quantile(csv$L.Orig.Amount,0.25))` and `r unname(quantile(csv$L.Orig.Amount,0.75))` (lower and upper quartiles respectively). Also shown is the oulier points which are determined as the values above 1.5*interquartile range (IQR). These outlier values represent a group of loans which are unusual in their quantity and are much higher than the average amount.  
+
+###Loan Quarter and Year
+After dividing the original variable into two different variables it is easier to identify patterns of each factor:
+```{r Univariate_Plots3}
+# Creating frequency tables (year & quarter) and building graphs (pie + barplot)
+table.quarter<-table(csv$Loan.Quarter)
+par(mar=c(5,5,2,2), mgp=c(3.5,0.5,0))
+labs<- paste("(",names(table.quarter),")", "\n", table.quarter, sep="")
+pie(table.quarter, labels = labs, main = "Loan Creation Quarter")
+table.year<-table(csv$Loan.Year)
+barplot(table.year,xlab = "Year",ylab = "count",main = "Loan Creation Year")
+```
+
+Quarter information shows that most loans are taken during the last quarter of the year. Given the year information, this statement can be misleading since a given year consists more or less observations than other years. 
+
+###Loan Status  
+This dataset contains information about the status of each observation (loan). The figure below shows that there are more than 1000 "current" status observations than its following "completed" status.
+```{r Univariate_Plots4}
+# Creating frequency table and building graph
+table.status<-table(csv$Loan.Status)
+par(mar=c(5,10,2,2), mgp=c(-1,0.5,0))
+barplot(table.status,xlab = "count",main = "Loan Status", las=2, horiz = T)
+```
+
+###Prosper Rating and Score  
+The Prosper Rating is expressed as a letter grade that indicates the expected level of risk associated with a loan listing.  Each letter grade corresponds to an estimated average annualized loss rate range. Rating of AA is considered to be a loan with lowest risk.  
+Prosper score on the other hand is a measure based on historical Prosper data and ranges from 1 to 11, with 11 being the best (lowest risk).
+```{r Univariate_Plots5}
+# Creating frequency tables and building graphs
+table.rating<-table(csv$Prosper.Rating)
+par(mar=c(5,3,2,2), mgp=c(2,0.5,0))
+barplot(table.rating,ylab = "count",xlab="Prosper Rating", main = "Prosper Rating")
+table.score<-table(csv$Prosper.Score)
+barplot(table.score,ylab = "count",xlab="Prosper Score", main = "Prosper Score")
+```
+
+First impression is that both variables show somewhat normal distribution regarding the grade of rating and score of the loan - middle grading, logically, are the most abundant measure.
+
+###Borrower Rate, State and Stated Monthly Income
+Borrower Rate, as the interest rate at which money may be borrowed, is a crucial factor determining the total amount of money to be returned to the investor (usually the bank).  
+Borrower State and Monthly Income may somewhat indicate the economic situation of the residents of each state.
+```{r Univariate_Plots6}
+#Borrower rate - density plot
+dens.rate <- density(csv$Borrower.Rate)
+plot(dens.rate, main="Density of Borrower Rate", xlab = "Borrower Rate")
+#Borrower state - Creating frequency table and building graph
+table.state <- table(csv$Borrower.State)
+par(mar=c(4,3,1,2),mgp=c(1.5,0,0))
+barplot(table.state, ylab = "Borrower State", xlab="count", main = "Borrower State", 
+        horiz = T, las=1, cex.names=0.5)
+#Monthly Income - Histogram
+par(mgp=c(2,0.5,0))
+hist(csv$Stated.Monthly.Income, main="Stated Monthly Income (Dollars)", 
+     xlab="Monthly Income", breaks = 5000, xlim = c(0,50000))
+```
+
+According to the plotted graphs we can see that borrower rate is mainly set between 0.1-0.2. The calculated average value is `r round(mean(csv$Borrower.Rate),2)`.  
+Examination of the state data graph shows that California state contribute the largest amount of loans. The three next on the list are the states of Florida, New-York, and Texas.  
+Since monthly income data are very spread, The histogram above shows only the bulk concentration of this variable (can be transformed by log transformation - was not applied here). It is clear that most borrowers have monthly income which ranges between 0-10000 dollars. The maximum recorded income is `r round(max(csv$Stated.Monthly.Income),0)` dollars. Since the unusual monthly income values might be a result of typing error (or other errors), it will be wiser to take into account only the bulk values (between 0 and 25,000 dollars).
+
+# Univariate Analysis
+The following list is a summary of the findings from the descriptive and univariate plots sections:
+
+* This extracted data set contains 9 variables with `r comma(nrow(csv))` observations (loans), from which 4 factors (of which one was divided into two) with different levels and 5 numeric variables.  
+* Average duration of loan is ~32 months.  
+* Average quantity of a loan is `r round(mean(csv$L.Orig.Amount),0)`$.  
+* The market was mostly saturated with originated loans between 2012-2014 (alternatively, from 2009 the amount of loans increases each year - it appears that this data-set is updated to the first quarter of 2014).  
+* Most loans are still active (were not completed).  
+* Prosper Rating and Score are normally distributed according to their degree of levels.  
+* Borrower data reveal interesting information regarding the nature and background of each recorded loan.  
+
+# Research Purpose  
+The objective of this study is to get insights regarding the nature of the loan market and by that, extrapolate those insights regarding the future or develop comprehensive models in future analysis.  
+
+
+# Bivariate/Multivariate Plots Section and Analysis
+
+In this section variables will be compared in order to find usefull correlations which may be used as a basis for construction of a model.
+To get a clue regarding directions of investigation, a correlation matrix is constructed (only numeric quantitative variables) :
+```{r echo=FALSE, Bivariate_Plots1}
+# Correlation matrix of all quantitative variables
+quantit<-rcorr(as.matrix(csv[,c("L.Months.Since.Originated", "L.Orig.Amount", "Prosper.Score", "Borrower.Rate", "Stated.Monthly.Income")], 
+                      use = "complete.obs"))
+#Function ordering correlations and p-values together
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+  )
+}
+#Applying the function above
+arrange(flattenCorrMatrix(quantit$r, quantit$P),desc(abs(cor)))
+corrplot(quantit$r, type="lower", order="hclust", 
+         p.mat = quantit$P, sig.level = 0.01, insig = "blank", tl.col = "black", 
+         tl.srt = 45, mar=c(1,1,1,1))
+```
+
+According to the output -  highest correlation that was detected is between Borrower Rate ~ Prosper Score with value of -0.65 (negative correlation). Other two negative correlations are Loan Amount ~ Borrower Rate and  Loan duration ~ Loan Amount. Additional positive correlations worth mentioning are Loan Amount ~ Prosper Score and Loan Amount ~ Stated Monthly Income. To summarize, there appear to be no strong correlation (correlation coefficient) between the quantitative variables.  
+
+The next figures will attempt to show combined categorical data:
+```{r echo=FALSE, Bivariate_Plots2}
+#Categorical Data
+#Year & Quarter
+Q.year<-table(csv$Loan.Quarter, csv$Loan.Year)
+barplot(Q.year, main="Loans by year and quarter",
+        xlab="Year", col=rainbow(4),
+        legend = rownames(Q.year),
+        args.legend = list(x = "top"))
+#Loan Status & Prosper rating
+#duplicating status column for modification
+csv$Loan.Stat.mod<-csv$Loan.Status
+#uniting some status categories to simplify analysis
+csv$Loan.Stat.mod<-recode(csv$Loan.Status,"c('Past Due (>120 days)', 
+                          'Past Due (1-15 days)', 
+                          'Past Due (16-30 days)',
+                          'Past Due (31-60 days)', 
+                          'Past Due (61-90 days)', 
+                          'Past Due (91-120 days)')= 'Past Due'")
+csv$Loan.Stat.mod<-recode(csv$Loan.Stat.mod,"c('Defaulted',
+                          'Chargedoff')='Defaulted'")
+csv$Loan.Stat.mod<-recode(csv$Loan.Stat.mod,"c(                         
+                          'Current',
+                          'Cancelled',
+                          'FinalPaymentInProgress',
+                          'Completed')='Current or Completed'")
+#graph
+par(mar=c(2,10,2,2))
+L.status_P.rating<-table(csv$Prosper.Rating, csv$Loan.Stat.mod)
+barplot(L.status_P.rating, main="Loan Status & Prosper rating",
+        xlab="Count", col=rainbow(12),
+        legend = rownames(L.status_P.rating),
+        args.legend = list(x = "topright", ncol=3),
+        horiz = T, las=1)
+```
+
+Combined categorical data show that loans are **NOT** created mosly at the forth quarter of each year (as mentioned earlier as a setback). Also prosper rating of the loans are divided similarly in each loan status (modified- Past due include all dues, Defaulted include also Chargedoff, and Current or Completed include all non-penalty loans).  
+
+An attempt to examine some quantitative and categorical variables together will show several insights:
+```{r echo=FALSE, Bivariate_Plots3}
+#Bivariate analysis
+#BorrowerRate~ProsperRating
+qplot(csv$Borrower.Rate,fill=csv$Prosper.Rating)
+#Year~Status
+qplot(Loan.Year,data=csv, fill=Loan.Stat.mod)
+S.Y<-table(csv$Loan.Stat.mod, csv$Loan.Year)
+S.Y.p<-prop.table(S.Y,2)
+S.Y.p
+#Amount~BorrowerRate(ProsperScore)
+qplot(L.Orig.Amount,Borrower.Rate,data=subset(csv,!is.na(Prosper.Score)), color=Prosper.Score)
+#Amount~L.Months.Since.Originated (Loan.Stat.mod)
+g1<-qplot(csv$L.Orig.Amount,csv$L.Months.Since.Originated,color=csv$Loan.Stat.mod, main = "Loan Amount and Duration", 
+          ylab = "Loan Duration (Months)", xlab = "Loan Amount")+
+  theme(legend.position="bottom")+
+  scale_color_manual(values=c("darkgreen","red", "yellow"),name = "Loan Status")
+  
+filt1<-subset(csv$L.Orig.Amount,csv$Loan.Stat.mod!="Current or Completed")
+filt2<-subset(csv$L.Months.Since.Originated,csv$Loan.Stat.mod!="Current or Completed")
+filt3<-subset(csv$Loan.Stat.mod,csv$Loan.Stat.mod!="Current or Completed")
+g2<-qplot(filt1,filt2,color=filt3, main = "Loan Amount and Duration", xlab = "Loan Amount", ylab = "Loan Duration (Months)")+
+  scale_color_manual(values=c("red", "yellow"))+theme(legend.position="none")
+grid.arrange(g1, g2, nrow=2)
+#Score~Rating
+R.Y<-table(csv$Prosper.Rating, csv$Prosper.Score)
+R.Y.p<-prop.table(R.Y,1)
+barplot(R.Y, main="Loans by Score and Rating",
+        xlab="Score", col=rainbow(7), ylab = "Count",
+        legend = rownames(R.Y),
+        args.legend = list(x = "topright"))
+```
+
+###Insights:  
+* Borrower Rate ~ Prosper Rating: It seems that low prosper rating is resulting in higher borrower rate (this conclusion may not be intuitive since it depends on the method of determining each parameter).  
+* Year~Status: ignoring year 2014 (assuming it has only first quarter data, as mentioned above), it can be seen that each year since 2011 has lower percentage of defaulted loans. Also, this percentage was below 2% since 2009.  
+* Loan amount ~ Borrower Rate (grouped by ProsperScore): logically, lower borrower rate together with lower loan amount are considered as safer loans to approve and hence in such situations the prosper score is tending to be higher.  
+* Loan amount ~ Loan duration (grouped by Loan status): It is clear that all recorded loans are divided into two big groups based on their duration. the nature of this division is unclear (why no existance of loans with ~60 months duration ?). Moreover, by excluding the "Current or Completed" loans its easy to see that "Past Due" loans are concentrated only in the lower group (which is somewhat logical).  
+* Loan score ~ Loan rating: It is clear that both variables are connected to each other. Lower score corresponds with lower rating.  
+
+# Final Plots and Summary  
+
+### Plot One  
+```{r echo=FALSE, Plot_One}
+corrplot(quantit$r, type="lower", order="hclust", title = "Correlation Plot",
+         p.mat = quantit$P, sig.level = 0.01, insig = "blank", tl.col = "black", 
+         tl.srt = 45, mar=c(1,1,1,1), xlab="Correlation Coefficient")
+```
+
+### Description One  
+Exploration of the quantitative variables showed that Borrower Rate, in relation to the other variables, is correlating best with Prosper Score. this correlation value is approximately -0.65 which indicate a negative moderate correlation. From general point of view it can be said that one variable is determined by the other. Such relation, in light of the correlation value, might be also affected by other variable/s.
+
+### Plot Two  
+```{r echo=FALSE, Plot_Two}
+qplot(L.Orig.Amount,Borrower.Rate,data=subset(csv,!is.na(Prosper.Score)), color=Prosper.Score, main = "Loan quantity - Borrower rate (by Prosper Score)",
+      xlab = "Loan Amount", ylab = "Borrower Rate")
+```
+
+### Description Two  
+This plot is the number of new loans originated each year and the final disposition of those loans. The early year of Prosper were marked by very low lending standards. Coupled with the global financial crisis, these early loans had very high default rates and many investors had losses. Only after 2011, the proportion of the defaulted loans was decreasing suggesting that lessons were learned after the global financial crisis.  
+In addition, every year since the global crisis (2009) is characterized in greater quantity of loans. In view of this, 2014 is expected to contain more loans than its predecessors (and also the years afterwards, assuming no emerge of another economic crisis).
+
+### Plot Three  
+```{r echo=FALSE, Plot_Three}
+grid.arrange(g1, g2, nrow=2)
+```
+
+### Description Three  
+
+It is unclear why the Duration of the loans can be divided into two groups as mentioned above (no loans of duration around ~60 months). This artifact might be a result of recording procedure or a method regarding the insertion of the loan duration into the data-base. Another observation is that the smallest amounts of loans are prolonging more time than expected/usual. Also, while excluding Current/Completed loans it is clear that "Past Due" loans exist only in the lower duration group. This absence may indicate a delicate approch of the lenders about their return payments (long-planned loans will change status directly from current to defaulted, giving the benefit of the doubt in the middle cases).
+
+------
+
+# Reflection  
+
+The Prosper Loan dataset consists `r comma(nrow(csv))` loans filled with different data. In order to get meaningful insights about this dataset it is very important to understand each field of data specifically and the whole domain generally. Choosing the suitable variables which will give insights once compared to other variables seems to be a very crucial step in the data analysis. The extraction and preparation of the data is also an important step, on which data will be ready to be analyzed. In this case, the choice of variables is deficient, leading to the lack of meaningful insights.  
+However, there are several arguments that can be raised considering the data analyzed:  
+
+1. The variables: Prosper rating, Prosper score, and Borrower rate are connected to each other in a way that one variable can be evaluated based on the other two variables. To better understand such relationships, a further comprehension of the definition of each variable is required. The same claim is valid also for Loan score and rating which show similar relationship.   
+2. The world is advancing in its demand to loans and their capability to be completed, especially after the 2009 crisis, which led to an effort to verify borrower’s information before granting a loan.  
+3. The loan original amount does not affect on the capability of the borrower to return it plus interest. Defaulted loans are not subjected to specific range of amount.  
+4. This analysis is clearly the tip of the iceberg of the possible analysis options on this data base. Therefore further studies required in order to uncover additional relationships and thus to develop models that can predict the nature of future loans.
+
