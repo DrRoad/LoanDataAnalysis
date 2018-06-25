@@ -8,7 +8,8 @@ output:
 ---
 
 
-#Abstract
+# Abstract  
+
 Nowadays, loans are considered as a complex tool which serves both borrowers and investors. Loans can be divided into a large number of areas and components which determine its terms. Sometimes, due to their complexity, these terms are not clear to the borrower or even to the investor.  
 As a result, the main questions that usually arise during loan creation are:
 
@@ -18,7 +19,7 @@ As a result, the main questions that usually arise during loan creation are:
 
 This report was made in order to get insights which might answer such questions or provide direction of research regarding loan uptake.
 
-#Data-set information
+# Data-set information
 This report shows data partial exploration of the [Loan dataset](https://www.kaggle.com/jschnessl/prosperloans) obtained from kaggle website and comes from the Prosper p2p lending platform.   
 This exploration will focus on 9 of the 81 variables presented in this dataset:  
 
@@ -37,7 +38,7 @@ This exploration will focus on 9 of the 81 variables presented in this dataset:
 
 
 
-#Descriptive statistics
+# Descriptive statistics
 As a preliminary step the measures of central tendancy and dispersion are shown:
 
 ```
@@ -85,39 +86,39 @@ Moreover, average amount of loans is 8337$ and most of the loans are still activ
 It is also worth noting that most of the loans originated from California state.  
 Furthermore, loan quarter variable shows also year information in addition to the quarter number. Hence in order to better handle this variable, it will be splitted into two separated columns: Loan.Quarter and Loan.Year.  
 
-#Univariate Plots Section  
+# Univariate Plots Section  
 First step in data exploration is to analyze the frequency of each variable in order to find different directions of inquiry.
 
-###Duration of Loans (Months since originated)  
+### Duration of Loans (Months since originated)  
 According to the histogram below, duration of loans is most concentrated between 0-10 months.Also, this variable is somewhat skewed to the right. In order to better present such distribution it is common to transform such skewed data by log transformation (will not be applied here).
 ![](LoanDataAnalysis_files/figure-html/Univariate_Plots1-1.png)<!-- -->
 
 The calculations of skewness (0.75) and kurtosis (2.06) supports this finding. 
 
-###Loan Original Amount  
+### Loan Original Amount  
 To illustrate this data a boxplot was drawn:
 ![](LoanDataAnalysis_files/figure-html/Univariate_Plots2-1.png)<!-- -->
 
 This boxplot shows that most loans are of size between 4000 and 12000 (lower and upper quartiles respectively). Also shown is the oulier points which are determined as the values above 1.5*interquartile range (IQR). These outlier values represent a group of loans which are unusual in their quantity and are much higher than the average amount.  
 
-###Loan Quarter and Year
+### Loan Quarter and Year
 After dividing the original variable into two different variables it is easier to identify patterns of each factor:
 ![](LoanDataAnalysis_files/figure-html/Univariate_Plots3-1.png)<!-- -->![](LoanDataAnalysis_files/figure-html/Univariate_Plots3-2.png)<!-- -->
 
 Quarter information shows that most loans are taken during the last quarter of the year. Given the year information, this statement can be misleading since a given year consists more or less observations than other years. 
 
-###Loan Status  
+### Loan Status  
 This dataset contains information about the status of each observation (loan). The figure below shows that there are more than 1000 "current" status observations than its following "completed" status.
 ![](LoanDataAnalysis_files/figure-html/Univariate_Plots4-1.png)<!-- -->
 
-###Prosper Rating and Score  
+### Prosper Rating and Score  
 The Prosper Rating is expressed as a letter grade that indicates the expected level of risk associated with a loan listing.  Each letter grade corresponds to an estimated average annualized loss rate range. Rating of AA is considered to be a loan with lowest risk.  
 Prosper score on the other hand is a measure based on historical Prosper data and ranges from 1 to 11, with 11 being the best (lowest risk).
 ![](LoanDataAnalysis_files/figure-html/Univariate_Plots5-1.png)<!-- -->![](LoanDataAnalysis_files/figure-html/Univariate_Plots5-2.png)<!-- -->
 
 First impression is that both variables show somewhat normal distribution regarding the grade of rating and score of the loan - middle grading, logically, are the most abundant measure.
 
-###Borrower Rate, State and Stated Monthly Income
+### Borrower Rate, State and Stated Monthly Income
 Borrower Rate, as the interest rate at which money may be borrowed, is a crucial factor determining the total amount of money to be returned to the investor (usually the bank).  
 Borrower State and Monthly Income may somewhat indicate the economic situation of the residents of each state.
 ![](LoanDataAnalysis_files/figure-html/Univariate_Plots6-1.png)<!-- -->![](LoanDataAnalysis_files/figure-html/Univariate_Plots6-2.png)<!-- -->![](LoanDataAnalysis_files/figure-html/Univariate_Plots6-3.png)<!-- -->
@@ -208,7 +209,7 @@ An attempt to examine some quantitative and categorical variables together will 
 
 ![](LoanDataAnalysis_files/figure-html/Bivariate_Plots3-3.png)<!-- -->![](LoanDataAnalysis_files/figure-html/Bivariate_Plots3-4.png)<!-- -->![](LoanDataAnalysis_files/figure-html/Bivariate_Plots3-5.png)<!-- -->
 
-###Insights:  
+### Insights:  
 * Borrower Rate ~ Prosper Rating: It seems that low prosper rating is resulting in higher borrower rate (this conclusion may not be intuitive since it depends on the method of determining each parameter).  
 * Year~Status: ignoring year 2014 (assuming it has only first quarter data, as mentioned above), it can be seen that each year since 2011 has lower percentage of defaulted loans. Also, this percentage was below 2% since 2009.  
 * Loan amount ~ Borrower Rate (grouped by ProsperScore): logically, lower borrower rate together with lower loan amount are considered as safer loans to approve and hence in such situations the prosper score is tending to be higher.  

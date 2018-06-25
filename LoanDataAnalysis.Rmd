@@ -2,14 +2,17 @@
 title: "Loan Data Exploration"
 author: "Yoni Wainsztok"
 date: "04-09-2017"
-output: html_document
+output:
+      html_document:
+        keep_md: true
 ---
 ```{r setup, include=FALSE, warning=FALSE, message=FALSE}
 #Defining markdown chunks options
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, error = FALSE, message = FALSE)
 ```
 
-#Abstract
+# Abstract  
+
 Nowadays, loans are considered as a complex tool which serves both borrowers and investors. Loans can be divided into a large number of areas and components which determine its terms. Sometimes, due to their complexity, these terms are not clear to the borrower or even to the investor.  
 As a result, the main questions that usually arise during loan creation are:
 
@@ -19,7 +22,7 @@ As a result, the main questions that usually arise during loan creation are:
 
 This report was made in order to get insights which might answer such questions or provide direction of research regarding loan uptake.
 
-#Data-set information
+# Data-set information
 This report shows data partial exploration of the [Loan dataset](https://www.kaggle.com/jschnessl/prosperloans) obtained from kaggle website and comes from the Prosper p2p lending platform.   
 This exploration will focus on 9 of the 81 variables presented in this dataset:  
 
@@ -74,7 +77,7 @@ csv<-rename(rawcsv[,c("LoanMonthsSinceOrigination",
 
 ```
 
-#Descriptive statistics
+# Descriptive statistics
 As a preliminary step the measures of central tendancy and dispersion are shown:
 ```{r Descriptive_statistics}
 # Getting descriptive statistics
@@ -93,10 +96,10 @@ Moreover, average amount of loans is 8337$ and most of the loans are still activ
 It is also worth noting that most of the loans originated from California state.  
 Furthermore, loan quarter variable shows also year information in addition to the quarter number. Hence in order to better handle this variable, it will be splitted into two separated columns: Loan.Quarter and Loan.Year.  
 
-#Univariate Plots Section  
+# Univariate Plots Section  
 First step in data exploration is to analyze the frequency of each variable in order to find different directions of inquiry.
 
-###Duration of Loans (Months since originated)  
+### Duration of Loans (Months since originated)  
 According to the histogram below, duration of loans is most concentrated between 0-10 months.Also, this variable is somewhat skewed to the right. In order to better present such distribution it is common to transform such skewed data by log transformation (will not be applied here).
 ```{r Univariate_Plots1}
 hist(csv$L.Months.Since.Originated, xlab="Months")
@@ -104,7 +107,7 @@ hist(csv$L.Months.Since.Originated, xlab="Months")
 
 The calculations of skewness (`r round(skewness(csv$L.Months.Since.Originated),2)`) and kurtosis (`r round(kurtosis(csv$L.Months.Since.Originated),2)`) supports this finding. 
 
-###Loan Original Amount  
+### Loan Original Amount  
 To illustrate this data a boxplot was drawn:
 ```{r Univariate_Plots2}
 boxplot(csv$L.Orig.Amount, horizontal = T, main="Loan Original Amount", xlab="Loan Quantity")
@@ -112,7 +115,7 @@ boxplot(csv$L.Orig.Amount, horizontal = T, main="Loan Original Amount", xlab="Lo
 
 This boxplot shows that most loans are of size between `r unname(quantile(csv$L.Orig.Amount,0.25))` and `r unname(quantile(csv$L.Orig.Amount,0.75))` (lower and upper quartiles respectively). Also shown is the oulier points which are determined as the values above 1.5*interquartile range (IQR). These outlier values represent a group of loans which are unusual in their quantity and are much higher than the average amount.  
 
-###Loan Quarter and Year
+### Loan Quarter and Year
 After dividing the original variable into two different variables it is easier to identify patterns of each factor:
 ```{r Univariate_Plots3}
 # Creating frequency tables (year & quarter) and building graphs (pie + barplot)
@@ -126,7 +129,7 @@ barplot(table.year,xlab = "Year",ylab = "count",main = "Loan Creation Year")
 
 Quarter information shows that most loans are taken during the last quarter of the year. Given the year information, this statement can be misleading since a given year consists more or less observations than other years. 
 
-###Loan Status  
+### Loan Status  
 This dataset contains information about the status of each observation (loan). The figure below shows that there are more than 1000 "current" status observations than its following "completed" status.
 ```{r Univariate_Plots4}
 # Creating frequency table and building graph
@@ -135,7 +138,7 @@ par(mar=c(5,10,2,2), mgp=c(-1,0.5,0))
 barplot(table.status,xlab = "count",main = "Loan Status", las=2, horiz = T)
 ```
 
-###Prosper Rating and Score  
+### Prosper Rating and Score  
 The Prosper Rating is expressed as a letter grade that indicates the expected level of risk associated with a loan listing.  Each letter grade corresponds to an estimated average annualized loss rate range. Rating of AA is considered to be a loan with lowest risk.  
 Prosper score on the other hand is a measure based on historical Prosper data and ranges from 1 to 11, with 11 being the best (lowest risk).
 ```{r Univariate_Plots5}
@@ -149,7 +152,7 @@ barplot(table.score,ylab = "count",xlab="Prosper Score", main = "Prosper Score")
 
 First impression is that both variables show somewhat normal distribution regarding the grade of rating and score of the loan - middle grading, logically, are the most abundant measure.
 
-###Borrower Rate, State and Stated Monthly Income
+### Borrower Rate, State and Stated Monthly Income
 Borrower Rate, as the interest rate at which money may be borrowed, is a crucial factor determining the total amount of money to be returned to the investor (usually the bank).  
 Borrower State and Monthly Income may somewhat indicate the economic situation of the residents of each state.
 ```{r Univariate_Plots6}
@@ -284,7 +287,7 @@ barplot(R.Y, main="Loans by Score and Rating",
         args.legend = list(x = "topright"))
 ```
 
-###Insights:  
+### Insights:  
 * Borrower Rate ~ Prosper Rating: It seems that low prosper rating is resulting in higher borrower rate (this conclusion may not be intuitive since it depends on the method of determining each parameter).  
 * Year~Status: ignoring year 2014 (assuming it has only first quarter data, as mentioned above), it can be seen that each year since 2011 has lower percentage of defaulted loans. Also, this percentage was below 2% since 2009.  
 * Loan amount ~ Borrower Rate (grouped by ProsperScore): logically, lower borrower rate together with lower loan amount are considered as safer loans to approve and hence in such situations the prosper score is tending to be higher.  
@@ -330,7 +333,7 @@ The Prosper Loan dataset consists `r comma(nrow(csv))` loans filled with differe
 However, there are several arguments that can be raised considering the data analyzed:  
 
 1. The variables: Prosper rating, Prosper score, and Borrower rate are connected to each other in a way that one variable can be evaluated based on the other two variables. To better understand such relationships, a further comprehension of the definition of each variable is required. The same claim is valid also for Loan score and rating which show similar relationship.   
-2. The world is advancing in its demand to loans and their capability to be completed, especially after the 2009 crisis, which led to an effort to verify borrower’s information before granting a loan.  
+2. The world is advancing in its demand to loans and their capability to be completed, especially after the 2009 crisis, which led to an effort to verify borrower?s information before granting a loan.  
 3. The loan original amount does not affect on the capability of the borrower to return it plus interest. Defaulted loans are not subjected to specific range of amount.  
 4. This analysis is clearly the tip of the iceberg of the possible analysis options on this data base. Therefore further studies required in order to uncover additional relationships and thus to develop models that can predict the nature of future loans.
 
